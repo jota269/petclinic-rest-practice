@@ -5,7 +5,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                // Ja agafa el mateix repo i branca que has configurat al job
+                echo 'Fent checkout del codi...'
                 checkout scm
             }
         }
@@ -17,7 +17,7 @@ pipeline {
             }
             post {
                 always {
-                    echo 'Publicant tests JUnit...'
+                    echo 'Publicant informes JUnit...'
                     junit 'target/surefire-reports/*.xml'
                 }
             }
@@ -30,7 +30,7 @@ pipeline {
             }
             post {
                 always {
-                    echo 'Arxivem informes de JaCoCo com a artefactes...'
+                    echo 'Arxivem target/site/jacoco com a artefacte...'
                     archiveArtifacts artifacts: 'target/site/jacoco/**', fingerprint: true
                 }
             }
@@ -39,8 +39,8 @@ pipeline {
         stage('SonarQube Scan') {
             steps {
                 echo 'Llençant anàlisi SonarQube...'
-                // ⚠️ Canvia el nom 'SonarQubeServer' pel NOM exacte del teu server a:
-                // Manage Jenkins > Configure System > SonarQube servers
+                // ⚠️ CANVIA aquest nom SI el teu servidor Sonar a Jenkins
+                // té un altre nom a "Manage Jenkins > Configure System":
                 withSonarQubeEnv('SonarQubeServer') {
                     sh './mvnw -q sonar:sonar'
                 }
