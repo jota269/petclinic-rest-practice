@@ -1,31 +1,23 @@
 pipeline {
     agent any
 
-    tools {
-        jdk   'jdk21'
-        maven 'maven3'
-    }
-
-    environment {
-        SONAR_TOKEN = credentials('sonar-token')
-    }
-
     stages {
 
         stage('Checkout') {
             steps {
+                // Ja agafa el mateix repo i branca que has configurat al job
                 checkout scm
             }
         }
 
         stage('Build & Tests') {
             steps {
-                // mvnw ja ve al projecte
-                bat 'mvnw.cmd -q clean verify'
+                echo 'Executant mvn clean verify...'
+                sh './mvnw -q clean verify'
             }
             post {
                 always {
-                    // Publicar tests JUnit
+                    echo 'Publicant tests JUnit...'
                     junit 'target/surefire-reports/*.xml'
                 }
             }
@@ -33,25 +25,32 @@ pipeline {
 
         stage('Coverage (JaCoCo)') {
             steps {
-                bat 'mvnw.cmd -q jacoco:report'
-                // Desa l’informe com a artefacte
-                archiveArtifacts artifacts: 'target/site/jacoco/**', fingerprint: true
+                echo 'Generant informe de cobertura...'
+                sh './mvnw -q jacoco:report'
+            }
+            post {
+                always {
+                    echo 'Arxivem informes de JaCoCo com a artefactes...'
+                    archiveArtifacts artifacts: 'target/site/jacoco/**', fingerprint: true
+                }
             }
         }
 
         stage('SonarQube Scan') {
             steps {
-                withSonarQubeEnv('local-sonarqube') {
-                    // Anàlisi amb SonarQube usant el token
-                    bat 'mvnw.cmd sonar:sonar -Dsonar.token=%SONAR_TOKEN%'
+                echo 'Llençant anàlisi SonarQube...'
+                // ⚠️ Canvia el nom 'SonarQubeServer' pel NOM exacte del teu server a:
+                // Manage Jenkins > Configure System > SonarQube servers
+                withSonarQubeEnv('SonarQubeServer') {
+                    sh './mvnw -q sonar:sonar'
                 }
             }
         }
 
         stage('Quality Gate') {
             steps {
-                // Falla el pipeline si el Quality Gate NO passa
-                timeout(time: 3, unit: 'MINUTES') {
+                echo 'Esperant resultat del Quality Gate...'
+                timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
